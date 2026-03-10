@@ -1,6 +1,5 @@
 import type { MarkdownTableMode } from "openclaw/plugin-sdk/config-runtime";
 import {
-  chunkMarkdownIR,
   FILE_REF_EXTENSIONS_WITH_TLD,
   isAutoLinkedFileRef,
   markdownToIR,
@@ -641,8 +640,12 @@ function splitMarkdownIRPreserveWhitespace(ir: MarkdownIR, limit: number): Markd
   if (normalizedLimit <= 0 || ir.text.length <= normalizedLimit) {
     return [ir];
   }
+
   const chunks: MarkdownIR[] = [];
   let cursor = 0;
+
+  const isWhitespace = (ch: string) => ch === " " || ch === "\n" || ch === "\t" || ch === "\r";
+
   while (cursor < ir.text.length) {
     const end = findMarkdownIRPreservedSplitIndex(ir.text, cursor, normalizedLimit);
     chunks.push({
@@ -652,6 +655,7 @@ function splitMarkdownIRPreserveWhitespace(ir: MarkdownIR, limit: number): Markd
     });
     cursor = end;
   }
+
   return chunks;
 }
 
@@ -723,8 +727,8 @@ function renderTelegramChunksWithinHtmlLimit(
   limit: number,
 ): TelegramFormattedChunk[] {
   const normalizedLimit = Math.max(1, Math.floor(limit));
-  const pending = chunkMarkdownIR(ir, normalizedLimit);
   const finalized: MarkdownIR[] = [];
+  const pending = splitMarkdownIRPreserveWhitespace(ir, normalizedLimit);
   while (pending.length > 0) {
     const chunk = pending.shift();
     if (!chunk) {
