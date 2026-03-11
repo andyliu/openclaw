@@ -170,10 +170,11 @@ function applyConfiguredProviderOverrides(params: {
     };
   }
   const resolvedInput = configuredModel?.input ?? discoveredModel.input;
-  const normalizedInput =
-    Array.isArray(resolvedInput) && resolvedInput.length > 0
-      ? resolvedInput.filter((item) => item === "text" || item === "image")
-      : (["text"] as Array<"text" | "image">);
+  const filteredInput = Array.isArray(resolvedInput)
+    ? resolvedInput.filter((item) => item === "text" || item === "image")
+    : [];
+  const normalizedInput: Array<"text" | "image"> =
+    filteredInput.length > 0 ? filteredInput : ["text"];
 
   return {
     ...discoveredModel,
