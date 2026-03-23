@@ -56,6 +56,14 @@ describe("fetchRemoteMedia telegram network policy", () => {
     undiciMocks.agentCtor.mockClear();
     undiciMocks.envHttpProxyAgentCtor.mockClear();
     undiciMocks.proxyAgentCtor.mockClear();
+    vi.stubEnv("HTTP_PROXY", "");
+    vi.stubEnv("HTTPS_PROXY", "");
+    vi.stubEnv("ALL_PROXY", "");
+    vi.stubEnv("http_proxy", "");
+    vi.stubEnv("https_proxy", "");
+    vi.stubEnv("all_proxy", "");
+    vi.stubEnv("NO_PROXY", "");
+    vi.stubEnv("no_proxy", "");
     (globalThis as Record<string, unknown>)[TEST_UNDICI_RUNTIME_DEPS_KEY] = {
       Agent: undiciMocks.agentCtor,
       EnvHttpProxyAgent: undiciMocks.envHttpProxyAgentCtor,
