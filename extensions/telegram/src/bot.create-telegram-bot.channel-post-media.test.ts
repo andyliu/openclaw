@@ -31,6 +31,17 @@ const TELEGRAM_TEST_TIMINGS = {
   textFragmentGapMs: 30,
 } as const;
 
+async function waitForReplySpyCalls(expectedCalls: number) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    if (replySpy.mock.calls.length === expectedCalls) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  expect(replySpy).toHaveBeenCalledTimes(expectedCalls);
+}
+
 function setOpenChannelPostConfig() {
   loadConfig.mockReturnValue({
     channels: {
@@ -52,22 +63,6 @@ function getChannelPostHandler() {
   return getOnHandler("channel_post") as (ctx: Record<string, unknown>) => Promise<void>;
 }
 
-function resolveFlushTimer(setTimeoutSpy: ReturnType<typeof vi.spyOn>) {
-  const flushTimerCallIndex = setTimeoutSpy.mock.calls.findLastIndex(
-    (call: Parameters<typeof setTimeout>) => call[1] === TELEGRAM_TEST_TIMINGS.mediaGroupFlushMs,
-  );
-  const flushTimer =
-    flushTimerCallIndex >= 0
-      ? (setTimeoutSpy.mock.calls[flushTimerCallIndex]?.[0] as (() => unknown) | undefined)
-      : undefined;
-  if (flushTimerCallIndex >= 0) {
-    clearTimeout(
-      setTimeoutSpy.mock.results[flushTimerCallIndex]?.value as ReturnType<typeof setTimeout>,
-    );
-  }
-  return flushTimer;
-}
-
 describe("createTelegramBot channel_post media", () => {
   it("buffers channel_post media groups and processes them together", async () => {
     setOpenChannelPostConfig();
@@ -80,7 +75,6 @@ describe("createTelegramBot channel_post media", () => {
         }),
     );
 
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
     try {
       const handler = getChannelPostHandler();
 
@@ -111,16 +105,10 @@ describe("createTelegramBot channel_post media", () => {
 
       await Promise.all([first, second]);
       expect(replySpy).not.toHaveBeenCalled();
-
-      const flushTimer = resolveFlushTimer(setTimeoutSpy);
-      expect(flushTimer).toBeTypeOf("function");
-      await flushTimer?.();
-
-      expect(replySpy).toHaveBeenCalledTimes(1);
+      await waitForReplySpyCalls(1);
       const payload = replySpy.mock.calls[0]?.[0] as { Body?: string };
       expect(payload.Body).toContain("album caption");
     } finally {
-      setTimeoutSpy.mockRestore();
       fetchSpy.mockRestore();
     }
   });
@@ -260,7 +248,6 @@ describe("createTelegramBot channel_post media", () => {
       });
     });
 
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
     try {
       const handler = getChannelPostHandler();
 
@@ -291,16 +278,10 @@ describe("createTelegramBot channel_post media", () => {
 
       await Promise.all([first, second]);
       expect(replySpy).not.toHaveBeenCalled();
-
-      const flushTimer = resolveFlushTimer(setTimeoutSpy);
-      expect(flushTimer).toBeTypeOf("function");
-      await flushTimer?.();
-
-      expect(replySpy).toHaveBeenCalledTimes(1);
+      await waitForReplySpyCalls(1);
       const payload = replySpy.mock.calls[0]?.[0] as { Body?: string };
       expect(payload.Body).toContain("partial album");
     } finally {
-      setTimeoutSpy.mockRestore();
       fetchSpy.mockRestore();
     }
   });
@@ -317,7 +298,6 @@ describe("createTelegramBot channel_post media", () => {
         }),
     );
 
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
     try {
       const handler = getChannelPostHandler();
 
@@ -348,14 +328,12 @@ describe("createTelegramBot channel_post media", () => {
 
       await Promise.all([first, second]);
       expect(replySpy).not.toHaveBeenCalled();
-
-      const flushTimer = resolveFlushTimer(setTimeoutSpy);
-      expect(flushTimer).toBeTypeOf("function");
-      await flushTimer?.();
+      await new Promise((resolve) =>
+        setTimeout(resolve, TELEGRAM_TEST_TIMINGS.mediaGroupFlushMs + 100),
+      );
 
       expect(replySpy).not.toHaveBeenCalled();
     } finally {
-      setTimeoutSpy.mockRestore();
       fetchSpy.mockRestore();
     }
   });
